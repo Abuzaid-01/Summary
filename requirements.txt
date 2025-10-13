@@ -1,11 +1,28 @@
-streamlit
-langchain
-langchain-community
-langchain-text-splitters
-langchain-groq
-PyPDF2
-chromadb
-openai
-python-dotenv
-groq
-sentence-transformers
+# streamlit
+# langchain
+# langchain-community
+# langchain-text-splitters
+# langchain-groq
+# PyPDF2
+# chromadb
+# openai
+# python-dotenv
+# groq
+# sentence-transformers
+
+streamlit>=1.28.0
+langchain>=0.1.0
+langchain-community>=0.0.20
+langchain-text-splitters>=0.0.1
+langchain-groq>=0.0.1
+langchain-huggingface>=0.0.1
+PyPDF2>=3.0.0
+chromadb>=0.4.22
+python-dotenv>=1.0.0
+groq>=0.4.0
+sentence-transformers>=2.2.0
+tiktoken>=0.5.0
+# For better PDF handling
+pdfplumber>=0.10.0
+# For caching
+diskcache>=5.6.0
