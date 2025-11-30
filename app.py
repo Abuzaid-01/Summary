@@ -478,11 +478,15 @@ with tab1:
             st.success(f"✅ Summary generated in {duration:.2f} seconds | Processed {total_chars:,} characters")
             
             st.subheader("📋 Summary:")
-            # FIXED: Using proper styling with visible text
-            st.markdown(f'<div class="summary-box">{summary}</div>', unsafe_allow_html=True)
-            
-            # Alternative: Use st.info for better visibility
-            # st.info(summary)
+            # Display summary with proper visibility
+            if summary and summary.strip():
+                st.markdown(f"""
+                <div style="background-color: #f0f2f6; padding: 1.5rem; border-radius: 0.5rem; border-left: 4px solid #1f77b4; color: #000000; line-height: 1.6; font-size: 1rem;">
+                {summary}
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.warning("⚠️ No summary was generated. Please try again.")
             
             # Action buttons
             col1, col2, col3 = st.columns(3)

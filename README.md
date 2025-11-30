@@ -1,8 +1,8 @@
 # PDF Text AI Tool
 
-[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](YOUR_DEPLOYED_APP_URL_HERE)
+ give 
 
-> 🚀 **[Live Demo](YOUR_DEPLOYED_APP_URL_HERE)** - Try it now!
+> 🚀 **[Live Demo](https://summary-chat-with-pdf.streamlit.app/)** - Try it now!
 
 A powerful Streamlit application for AI-powered text and PDF summarization with interactive chat capabilities using Groq's LLaMA models.
 

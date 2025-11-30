@@ -1,79 +1,24 @@
-# import os 
-# from langchain.prompts import PromptTemplate
-# from langchain.chains import LLMChain
-# from langchain_core.documents import Document
-# from langchain_text_splitters import CharacterTextSplitter
-# from langchain_groq import ChatGroq
-# from langchain_community.embeddings import HuggingFaceEmbeddings
-# from langchain_community.vectorstores import Chroma
-# from langchain.chains import RetrievalQA
-# from PyPDF2 import PdfReader
-
-
-# from dotenv import load_dotenv
-# load_dotenv()
-
-
-# API_KEY = os.getenv("GROQ_API_KEY")
-
-# llm = ChatGroq(
-#     api_key=API_KEY, 
-#     model="llama-3.1-70b-versatile",
-#     temperature=0.5,
-#     max_tokens=1024
-# )
-# text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
-
-# def read_pdf(file_path):
-#     reader = PdfReader(file_path)
-#     text = ""
-#     for page in reader.pages:
-#         text += page.extract_text() + "\n"
-#     return text
-
-
-# def chat_with_pdf(file_path, query):
-#     text = read_pdf(file_path)
-#     chunks = text_splitter.split_text(text)
-#     docs = [Document(page_content=chunk) for chunk in chunks]
-
-#     embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")  
-#     vectorstore = Chroma.from_documents(docs, embeddings)
-    
-#     qa = RetrievalQA.from_chain_type(
-#         llm=llm,
-#         chain_type="stuff",
-#         retriever=vectorstore.as_retriever()
-#     )
-    
-#     answer = qa.run(query)
-#     return answer
-
 
 import os
 from langchain.prompts import PromptTemplate
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_groq import ChatGroq
+import google.generativeai as genai
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import Chroma
-from langchain.chains import RetrievalQA
 from PyPDF2 import PdfReader
 import streamlit as st
 from dotenv import load_dotenv
 
 load_dotenv()
 
-API_KEY = os.getenv("GROQ_API_KEY")
+API_KEY = os.getenv("GEMINI_API_KEY")
 
-# Initialize LLM with SPEED-OPTIMIZED settings
-llm = ChatGroq(
-    api_key=API_KEY, 
-    model="llama-3.1-8b-instant",  # Fastest model
-    temperature=0.2,  # Lower for consistency and speed
-    max_tokens=400,  # Shorter responses = faster
-    timeout=15,  # Shorter timeout
-    streaming=False
-)
+# Initialize Gemini directly
+if API_KEY:
+    genai.configure(api_key=API_KEY)
+    model = genai.GenerativeModel('models/gemini-2.5-flash')
+else:
+    model = None
 
 # OPTIMIZED text splitter - larger chunks = fewer embeddings
 text_splitter = RecursiveCharacterTextSplitter(
@@ -144,65 +89,48 @@ def create_vectorstore(_file_hash, text):
 
 def chat_with_pdf(file_path, query, file_hash, chat_history=None):
     """
-    SPEED-OPTIMIZED chat with PDF using RAG.
-    
-    Args:
-        file_path: Path to PDF file
-        query: User question
-        file_hash: Hash of file for caching
-        chat_history: Previous conversation history
-    
-    Returns:
-        Answer string and source documents
+    Chat with PDF using direct Gemini API and RAG.
     """
     try:
-        # Read PDF (cached by Streamlit file uploader)
+        if not model:
+            return "❌ Gemini API key not configured.", []
+            
+        # Read PDF
         text = read_pdf(file_path)
         
         if not text or text.strip() == "":
             return "❌ Could not extract text from PDF.", []
         
-        # Create or retrieve cached vectorstore (FAST - cached after first use)
+        # Create or retrieve cached vectorstore
         vectorstore = create_vectorstore(file_hash, text)
         
         if not vectorstore:
             return "❌ Error creating search index.", []
         
-        # Create retriever with SPEED optimization
-        retriever = vectorstore.as_retriever(
-            search_type="similarity",
-            search_kwargs={"k": 3}  # Reduced from 4 to 3 for speed
-        )
+        # Get relevant documents
+        docs = vectorstore.similarity_search(query, k=3)
         
-        # ULTRA-CONCISE prompt for speed
-        prompt_template = """Answer briefly based on the context. If not found, say "Not in document."
+        if not docs:
+            return "❌ No relevant information found in the PDF.", []
+        
+        # Combine context from retrieved documents
+        context = "\n\n".join([doc.page_content for doc in docs])
+        
+        # Create prompt
+        prompt = f"""Answer the question based on the context below. If the answer is not in the context, say "Not found in document."
 
-Context: {context}
+Context:
+{context}
 
-Question: {question}
+Question: {query}
 
 Answer:"""
         
-        PROMPT = PromptTemplate(
-            template=prompt_template,
-            input_variables=["context", "question"]
-        )
+        # Get answer from Gemini
+        response = model.generate_content(prompt)
+        answer = response.text.strip() if response.text else "No response generated."
         
-        # Create QA chain
-        qa = RetrievalQA.from_chain_type(
-            llm=llm,
-            chain_type="stuff",  # Fastest chain type
-            retriever=retriever,
-            return_source_documents=True,
-            chain_type_kwargs={"prompt": PROMPT}
-        )
-        
-        # Get answer using invoke (modern API)
-        result = qa.invoke({"query": query})
-        answer = result['result']
-        source_docs = result.get('source_documents', [])
-        
-        return answer, source_docs
+        return answer, docs
         
     except Exception as e:
         error_msg = str(e)
